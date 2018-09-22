@@ -25,7 +25,7 @@ architecture flag_buff of Buff is
 begin
 	data_out <= buf_reg after 10 ns;
 	flag <= flag_reg after 10 ns;
-	
+		
 	process (clk, reset)
 	begin
 		if(reset = '1') then
@@ -37,13 +37,11 @@ begin
 		end if;
 	end process;
 
-	process(buf_reg, flag_reg, set_flag, clr_flag)
+	process(set_flag, clr_flag)
 	begin
-		buf_next <= buf_reg;
-		flag_next <= flag_reg;
 		if (clr_flag = '1') then
 			flag_next <= '0';
-		elsif (set_flag = '1') then
+		elsif (rising_edge(set_flag)) then
 			buf_next <= data_in;
 			flag_next <= '1';
 		end if;
