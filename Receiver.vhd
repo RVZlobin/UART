@@ -16,6 +16,10 @@ entity Receiver is
 		rx_done_tick: out STD_LOGIC;
 		data_out: out STD_LOGIC_VECTOR(DBIT - 1 downto 0)
 	);
+	type t_mass_lut is array (0 to 15) OF integer range 0 to 16;
+	constant mass_cfg : t_mass_lut := (
+			0, 1, 5, 8, 10, 12, 15, 16, 16, 15, 12, 10, 8, 5, 1, 0
+		);
 end Receiver;
 
 architecture uart_rx of Receiver is
@@ -30,14 +34,20 @@ architecture uart_rx of Receiver is
 	signal b_next: STD_LOGIC_VECTOR(DBIT - 1 downto 0) := (others => 'X');
 	signal s_bits_reg: UNSIGNED (SBIT - 1 downto 0) := (others => 'X');
 	signal s_bits_next: UNSIGNED (SBIT - 1 downto 0) := (others => 'X');
+	signal rx_done_tick_reg: STD_LOGIC;
+	signal rx_done_tick_next: STD_LOGIC;
 	shared variable bit_array: STD_LOGIC_VECTOR (SB_TICK - 1 downto 0) := (others => 'X');
+	shared variable mass_one: INTEGER range 0 to SB_TICK * SB_TICK := 0;
+	shared variable mass_zero: INTEGER range 0 to SB_TICK * SB_TICK := 0;
 	
 begin
 	data_out <= b_reg;
+	rx_done_tick <= rx_done_tick_reg;
 	
 	process (clk, reset) --FSMD state and data regs.
 	begin
 		if (reset = '1') then
+			rx_done_tick_reg <= '0';
 			state_reg <= idle;
 			rx_reg <= '1';
 			s_reg <= (others => '0');
@@ -51,6 +61,7 @@ begin
 			n_reg <= n_next;
 			b_reg <= b_next;
 			s_bits_reg <= s_bits_next;
+			rx_done_tick_reg <= rx_done_tick_next;
 		end if;
 	end process;
 	
@@ -58,38 +69,54 @@ begin
 	process (reset, s_tick)
 	begin
 		if(reset = '1') then
-			rx_done_tick <= '0';
+			mass_one := 0;
+			mass_zero := 0;
+			rx_done_tick_next <= '0';
 			state_next <= idle;
 			s_next <= (others => '0');
 			n_next <= (others => '0');
 			b_next <= (others => 'X');
 		elsif(rising_edge(s_tick) and s_tick = '1') then
-			rx_done_tick <= '0';
+			rx_done_tick_next <= '0';
 			case state_reg is
 				when idle => 
 					if (rx_reg = '0') then
 						state_next <= start;
 						bit_array(to_integer(s_reg)) := rx_reg;
+						mass_zero := mass_zero + mass_cfg(to_integer(s_reg));
 						s_next <= s_reg + 1;
 					end if;
 				when start =>
 					if (s_reg = SB_TICK - 1) then
-						if(bit_array(7) = '0') then
+						if(mass_zero > mass_one) then
 							state_next <= data;
 						else
 							state_next <= idle;
 						end if;
+						mass_one := 0;
+						mass_zero := 0;
 						bit_array := (others => 'X');
 						s_next <= (others => '0');
 						n_next <= (others => '0');
 					else
 						bit_array(to_integer(s_reg)) := rx_reg;
+						if(rx_reg = '1') then
+							mass_one := mass_one + mass_cfg(to_integer(s_reg));
+						elsif(rx_reg = '0') then
+							mass_zero := mass_zero + mass_cfg(to_integer(s_reg));
+						end if;
 						s_next <= s_reg + 1;
 					end if;
 				when data =>
 					if (s_reg = SB_TICK - 1) then
 						s_next <= (others => '0');
-						b_next <= bit_array(7) & b_reg(DBIT - 1 downto 1);
+						if(mass_zero > mass_one) then
+							b_next <= '0' & b_reg(DBIT - 1 downto 1);
+						else
+							b_next <= '1' & b_reg(DBIT - 1 downto 1);
+						end if;
+						mass_one := 0;
+						mass_zero := 0;
 						bit_array := (others => 'X');
 						if (n_reg = (DBIT - 1)) then
 							state_next <= stop;
@@ -99,6 +126,11 @@ begin
 						end if;
 					else
 						bit_array(to_integer(s_reg)) := rx_reg;
+						if(rx_reg = '1') then
+							mass_one := mass_one + mass_cfg(to_integer(s_reg));
+						elsif(rx_reg = '0') then
+							mass_zero := mass_zero + mass_cfg(to_integer(s_reg));
+						end if;
 						s_next <= s_reg + 1;
 					end if;
 				when stop =>
@@ -106,7 +138,7 @@ begin
 						s_next <= (others => '0');
 						if(s_bits_reg = (SBIT - 1)) then
 							state_next <= idle;
-							rx_done_tick <= '1';
+							rx_done_tick_next <= '1';
 							s_bits_next <= (others => '0');
 						else
 							s_bits_next <= s_bits_reg + 1;
