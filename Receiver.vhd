@@ -69,13 +69,15 @@ begin
 	process (reset, s_tick)
 	begin
 		if(reset = '1') then
-			mass_one := 0;
-			mass_zero := 0;
 			rx_done_tick_next <= '0';
 			state_next <= idle;
 			s_next <= (others => '0');
 			n_next <= (others => '0');
-			b_next <= (others => 'X');
+			b_next <= (others => '0');
+			s_bits_next <= (others => 'X');
+			mass_one := 0;
+			mass_zero := 0;
+			bit_array := (others => 'X');
 		elsif(rising_edge(s_tick) and s_tick = '1') then
 			rx_done_tick_next <= '0';
 			case state_reg is

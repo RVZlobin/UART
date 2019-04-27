@@ -23,25 +23,26 @@ architecture flag_buff of Buff is
 	signal flag_reg: STD_LOGIC := '0';
 	signal flag_next: STD_LOGIC := '0';
 begin
-	data_out <= buf_reg after 10 ns;
-	flag <= flag_reg after 10 ns;
-		
+	data_out <= buf_reg after 2 ns;
+	flag <= flag_reg after 2 ns;
+	
 	process (clk, reset)
 	begin
 		if(reset = '1') then
 			buf_reg <= (others => '0');
 			flag_reg <= '0';
-		elsif (clk'event and clk = '1') then
+		elsif (rising_edge(clk)) then
 			buf_reg <= buf_next;
 			flag_reg <= flag_next;
 		end if;
 	end process;
 
-	process(set_flag, clr_flag)
+	process(set_flag, clr_flag, reset)
 	begin
-		if (clr_flag = '1') then
+		if (clr_flag = '1' or reset = '1') then
 			flag_next <= '0';
-		elsif (rising_edge(set_flag)) then
+			buf_next <= (others => '0');
+		elsif (set_flag'event and set_flag = '1') then
 			buf_next <= data_in;
 			flag_next <= '1';
 		end if;
