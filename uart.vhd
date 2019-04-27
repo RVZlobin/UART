@@ -46,18 +46,18 @@ entity uart is
 		SB_TICK: INTEGER := 16
 	);
 	port(
-		clk: in STD_LOGIC := '0';
-		clk_uart: in STD_LOGIC := '0';
-		reset: in STD_LOGIC := '0';
-		rx: in STD_LOGIC := '1';
-		w_data: in STD_LOGIC_VECTOR(DBIT - 1 downto 0) := (others => 'X');
-		rx_clr_flag: in STD_LOGIC := '0';
-		tx_set_flag: in STD_LOGIC := '0';
-		tx: out STD_LOGIC := '1';
-		tx_next: out STD_LOGIC := '0';
-		tx_empty: out STD_LOGIC := '1';
-		rx_empty: out STD_LOGIC := '1';
-		r_data: out STD_LOGIC_VECTOR(DBIT - 1 downto 0):= (others => 'X')
+		clk: in STD_LOGIC := '0'; -- тактовый сигнал
+		clk_uart: in STD_LOGIC := '0'; -- внешний тактовый сигнал БОД
+		reset: in STD_LOGIC := '0'; -- сброс
+		rx: in STD_LOGIC := '1'; -- Линия приемника (вывод FPGA)
+		w_data: in STD_LOGIC_VECTOR(DBIT - 1 downto 0) := (others => 'X'); --данные для передачи
+		rx_clr_flag: in STD_LOGIC := '0'; -- данные с приемника обработаны (импульс подать когда все считали)
+		tx_set_flag: in STD_LOGIC := '0'; -- данные для передачи установлены (импульс подать когда все выставили)
+		tx: out STD_LOGIC := '1'; -- Линия передатчика (вывод FPGA)
+		tx_next: out STD_LOGIC := '0'; -- импульс запроса следующих данных для передачи
+		tx_empty: out STD_LOGIC := '1'; -- Передатчик пуст
+		rx_empty: out STD_LOGIC := '1'; -- Приемник пуст
+		r_data: out STD_LOGIC_VECTOR(DBIT - 1 downto 0):= (others => 'X') -- Принятые данные
 	);
 end uart;
 
